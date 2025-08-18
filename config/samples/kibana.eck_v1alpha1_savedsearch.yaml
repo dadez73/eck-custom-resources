@@ -1,33 +1,9 @@
 apiVersion: kibana.eck.github.com/v1alpha1
 kind: SavedSearch
 metadata:
+  labels:
+    app.kubernetes.io/name: eck-custom-resources
+    app.kubernetes.io/managed-by: kustomize
   name: savedsearch-sample
 spec:
-  targetInstance:
-    name: kibana-quickstart
-  dependencies:
-    - type: index-pattern
-      name: indexpattern-sample
-  body: |
-    {
-      "attributes": {
-         "columns": [
-            "_source"
-         ],
-         "description": "",
-         "hits": 0,
-         "kibanaSavedObjectMeta": {
-            "searchSourceJSON": "{\"highlightAll\":true,\"version\":true,\"query\":{\"query\":\"(message: test)\",\"language\":\"kuery\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
-         },
-         "sort": [],
-         "title": "Message contains test",
-         "version": 1
-      },
-      "references": [
-         {
-            "id": "indexpattern-sample",
-            "name": "kibanaSavedObjectMeta.searchSourceJSON.index",
-            "type": "index-pattern"
-         }
-      ]
-    }
+  # TODO(user): Add fields here

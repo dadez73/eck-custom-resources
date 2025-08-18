@@ -6,13 +6,14 @@ import (
 	"os"
 	"strings"
 
+	configv2 "eck-custom-resources/api/config/v2"
+	"eck-custom-resources/api/es.eck/v1alpha1"
+	eseckv1alpha1 "eck-custom-resources/api/es.eck/v1alpha1"
+	"eck-custom-resources/utils"
+
 	"github.com/elastic/elastic-transport-go/v8/elastictransport"
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
-	configv2 "github.com/xco-sk/eck-custom-resources/apis/config/v2"
-	"github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1"
-	eseckv1alpha1 "github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1"
-	"github.com/xco-sk/eck-custom-resources/utils"
 	k8sv1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"

@@ -1,0 +1,22 @@
+## Append samples of your project ##
+resources:
+- es.eck_v1alpha1_index.yaml
+- es.eck_v1alpha1_indextemplate.yaml
+- config_v2_projectconfig.yaml
+- es.eck_v1alpha1_indexlifecyclepolicy.yaml
+- es.eck_v1alpha1_snapshotlifecyclepolicy.yaml
+- es.eck_v1alpha1_ingestpipeline.yaml
+- es.eck_v1alpha1_snapshotrepository.yaml
+- kibana.eck_v1alpha1_savedsearch.yaml
+- kibana.eck_v1alpha1_indexpattern.yaml
+- kibana.eck_v1alpha1_visualization.yaml
+- kibana.eck_v1alpha1_dashboard.yaml
+- es.eck_v1alpha1_elasticsearchrole.yaml
+- es.eck_v1alpha1_elasticsearchuser.yaml
+- kibana.eck_v1alpha1_space.yaml
+- kibana.eck_v1alpha1_lens.yaml
+- kibana.eck_v1alpha1_dataview.yaml
+- kibana.eck_v1alpha1_kibanainstance.yaml
+- es.eck_v1alpha1_elasticsearchinstance.yaml
+- es.eck_v1alpha1_componenttemplate.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

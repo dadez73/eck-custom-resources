@@ -1,18 +1,9 @@
 apiVersion: es.eck.github.com/v1alpha1
 kind: IndexTemplate
 metadata:
+  labels:
+    app.kubernetes.io/name: eck-custom-resources
+    app.kubernetes.io/managed-by: kustomize
   name: indextemplate-sample
 spec:
-  targetInstance:
-    name: elasticsearch-quickstart
-  body: |
-    {
-      "index_patterns" : ["index-*"],
-      "priority" : 1,
-      "template": {
-        "settings" : {
-          "number_of_shards" : 2,
-          "number_of_replicas" : 0
-        }
-      }
-    }
+  # TODO(user): Add fields here

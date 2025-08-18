@@ -1,20 +1,9 @@
 apiVersion: es.eck.github.com/v1alpha1
 kind: ElasticsearchRole
 metadata:
+  labels:
+    app.kubernetes.io/name: eck-custom-resources
+    app.kubernetes.io/managed-by: kustomize
   name: elasticsearchrole-sample
 spec:
-  targetInstance:
-    name: elasticsearch-quickstart
-  body: |
-    {
-      "cluster": ["all"],
-      "indices": [
-        {
-          "names": [ "index-sample"],
-          "privileges": ["all"]
-        }
-      ],
-      "metadata" : {
-        "version" : 1
-      }
-    }
+  # TODO(user): Add fields here

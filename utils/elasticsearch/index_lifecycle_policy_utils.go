@@ -1,11 +1,12 @@
 package elasticsearch
 
 import (
-	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1"
-	"github.com/xco-sk/eck-custom-resources/utils"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"eck-custom-resources/api/es.eck/v1alpha1"
+	"eck-custom-resources/utils"
 	"strings"
+
+	"github.com/elastic/go-elasticsearch/v8"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func DeleteIndexLifecyclePolicy(esClient *elasticsearch.Client, indexLifecyclePolicyName string) (ctrl.Result, error) {

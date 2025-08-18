@@ -1,16 +1,9 @@
 apiVersion: kibana.eck.github.com/v1alpha1
 kind: Space
 metadata:
+  labels:
+    app.kubernetes.io/name: eck-custom-resources
+    app.kubernetes.io/managed-by: kustomize
   name: space-sample
 spec:
-  targetInstance:
-    name: kibana-quickstart
-  body: |
-    {
-      "name": "ECK Space sample",
-      "description" : "This space was created using ECK-CR operator",
-      "color": "#aabbcc",
-      "initials": "CR",
-      "disabledFeatures": [],
-      "imageUrl": ""
-    }
+  # TODO(user): Add fields here

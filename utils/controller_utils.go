@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	configv2 "github.com/xco-sk/eck-custom-resources/apis/config/v2"
+	configv2 "eck-custom-resources/api/config/v2"
+
 	k8sv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"

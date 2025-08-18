@@ -7,9 +7,10 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"eck-custom-resources/api/es.eck/v1alpha1"
+	"eck-custom-resources/utils"
+
 	"github.com/elastic/go-elasticsearch/v8"
-	"github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1"
-	"github.com/xco-sk/eck-custom-resources/utils"
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"

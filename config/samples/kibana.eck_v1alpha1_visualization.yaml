@@ -1,30 +1,9 @@
 apiVersion: kibana.eck.github.com/v1alpha1
 kind: Visualization
 metadata:
+  labels:
+    app.kubernetes.io/name: eck-custom-resources
+    app.kubernetes.io/managed-by: kustomize
   name: visualization-sample
 spec:
-  targetInstance:
-    name: kibana-quickstart
-  dependencies:
-    - type: index-pattern
-      name: indexpattern-sample
-  body: |
-    {
-      "attributes": {
-        "visState": "{\"title\":\"Count visualization\",\"type\":\"metric\",\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"params\":{},\"schema\":\"metric\"}],\"params\":{\"addTooltip\":true,\"addLegend\":false,\"type\":\"metric\",\"metric\":{\"percentageMode\":false,\"useRanges\":false,\"colorSchema\":\"Green to Red\",\"metricColorMode\":\"None\",\"colorsRange\":[{\"from\":0,\"to\":10000}],\"labels\":{\"show\":true},\"invertColors\":false,\"style\":{\"bgFill\":\"#000\",\"bgColor\":false,\"labelColor\":false,\"subText\":\"\",\"fontSize\":60}}}}",
-        "title": "Count visualization",
-        "uiStateJSON": "{}",
-        "description": "",
-        "version": 1,
-        "kibanaSavedObjectMeta": {
-          "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
-        }
-      },
-      "references": [
-        {
-          "name": "kibanaSavedObjectMeta.searchSourceJSON.index",
-          "type": "index-pattern",
-          "id": "indexpattern-sample"
-        }
-      ]
-    }
+  # TODO(user): Add fields here

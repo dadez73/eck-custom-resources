@@ -1,0 +1,9 @@
+apiVersion: config.github.com/v2
+kind: ProjectConfig
+metadata:
+  labels:
+    app.kubernetes.io/name: eck-custom-resources
+    app.kubernetes.io/managed-by: kustomize
+  name: projectconfig-sample
+spec:
+  # TODO(user): Add fields here

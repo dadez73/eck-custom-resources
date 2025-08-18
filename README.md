@@ -1,116 +1,135 @@
-# Custom resources for ECK
-[![docker-publish](https://github.com/xco-sk/eck-custom-resources/actions/workflows/docker-publish.yaml/badge.svg)](https://github.com/xco-sk/eck-custom-resources/actions/workflows/docker-publish.yaml)
-[![helm-publish](https://github.com/xco-sk/eck-custom-resources/actions/workflows/helm-publish.yml/badge.svg)](https://github.com/xco-sk/eck-custom-resources/actions/workflows/helm-publish.yml)
+# eck-custom-resources
+// TODO(user): Add simple overview of use/purpose
 
-Kubernetes operator that enables the installation of various resources for
-Elasticsearch and Kibana.
+## Description
+// TODO(user): An in-depth paragraph about your project and overview of use
 
-Currently supported resources: 
-- For Elasticsearch:
-  - [Elasticsearch Instance](docs/cr_elasticsearch_instance.md)
-  - [Index](docs/cr_index.md)
-  - [Index template](docs/cr_index_template.md)
-  - [Index lifecycle policy](docs/cr_index_lifecycle_policy.md)
-  - [Ingest pipeline](docs/cr_ingest_pipeline.md)
-  - [Snapshot repository](docs/cr_snapshot_repo.md)
-  - [Snapshot lifecycle policy](docs/cr_snapshot_lifecycle_policy.md)
-  - [User](docs/cr_user.md)
-  - [Role](docs/cr_role.md)
-  - [API key](docs/cr_apikey.md)
-  - [Component template](docs/cr_component_template.md)
-- For Kibana:
-  - [Kibana Instance](docs/cr_kibana_instance.md)
-  - [Space](docs/cr_space.md)
-  - [Index pattern](docs/cr_index_pattern.md)
-  - [Saved search](docs/cr_saved_search.md)
-  - [Visualization](docs/cr_visualization.md)
-  - [Lens](docs/cr_lens.md)
-  - [Dashboard](docs/cr_dashboard.md)
-  - [Data View](docs/cr_data_view.md)
+## Getting Started
 
-## Installation
+### Prerequisites
+- go version v1.24.0+
+- docker version 17.03+.
+- kubectl version v1.11.3+.
+- Access to a Kubernetes v1.11.3+ cluster.
 
-```shell
-# Add eck-custom-resources helm repo
-helm repo add eck-custom-resources https://xco-sk.github.io/eck-custom-resources/
+### To Deploy on the cluster
+**Build and push your image to the location specified by `IMG`:**
 
-# Install chart
-helm install eck-cr eck-custom-resources/eck-custom-resources-operator
-```
-Configuration options are documented in [chart README file](charts/eck-custom-resources-operator/README.md)
-
-## Upgrade guide
-
-### From 0.6.0 to 0.7.0
-There is a new `ComponentTemplate` CRD present. To apply the CRD, run:
-```
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/v0.7.0/config/crd/bases/es.eck.github.com_componenttemplates.yaml
+```sh
+make docker-build docker-push IMG=<some-registry>/eck-custom-resources:tag
 ```
 
-### From 0.5.0 to 0.6.0
-The Elasticsearch API Key support was introduced. To apply the CRD, run:
-```
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/v0.6.0/config/crd/bases/es.eck.github.com_elasticsearchapikeys.yaml
-```
+**NOTE:** This image ought to be published in the personal registry you specified.
+And it is required to have access to pull the image from the working environment.
+Make sure you have the proper permission to the registry if the above commands don’t work.
 
-### From 0.4.1 to 0.5.0
-The Multi-target support was introduced. This changes is backward compatible, but in order to make use of the multi-target support
-apply the new CRDs manually:
-```
+**Install the CRDs into the cluster:**
 
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/es.eck.github.com_elasticsearchinstances.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/es.eck.github.com_elasticsearchroles.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/es.eck.github.com_elasticsearchusers.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/es.eck.github.com_indexlifecyclepolicies.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/es.eck.github.com_indextemplates.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/es.eck.github.com_indices.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/es.eck.github.com_ingestpipelines.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/es.eck.github.com_snapshotlifecyclepolicies.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/es.eck.github.com_snapshotrepositories.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/kibana.eck.github.com_kibanainstances.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/kibana.eck.github.com_dashboards.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/kibana.eck.github.com_indexpatterns.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/kibana.eck.github.com_lens.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/kibana.eck.github.com_savedsearches.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/kibana.eck.github.com_spaces.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/kibana.eck.github.com_visualizations.yaml
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.5.0/config/crd/bases/kibana.eck.github.com_dataviews.yaml
+```sh
+make install
 ```
 
-There are 2 new CRDs, `ElasticsearchInstance` and `KibanaInstance` that allows you to deploy the target configuration for
-both Kibana and Elasticsearch. The rest of the CRDs were extended with optional `spec.targetInstance.name` field, that should reference
-the `ElasticsearchInstance`/`KibanaInstance`. If `targetInstance` field is not present, the default operator configuration (`elasticsearch` and `kibana`
-fields) is used.
-This approach should ensure the backward compatibility with previously deployed CRDs.
-See [samples](config/samples).
+**Deploy the Manager to the cluster with the image specified by `IMG`:**
 
-### From 0.3.2 to 0.4.1
-There is new `DataView` CRD present. To apply the CRD, run:
-```
-kubectl apply --server-side -f https://raw.githubusercontent.com/xco-sk/eck-custom-resources/eck-custom-resources-operator-0.4.1/config/crd/bases/kibana.eck.github.com_dataviews.yaml
+```sh
+make deploy IMG=<some-registry>/eck-custom-resources:tag
 ```
 
+> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
+privileges or be logged in as admin.
 
-## Uninstallation
-To uninstall the eck-cr from Kubernetes cluster, run:
+**Create instances of your solution**
+You can apply the samples (examples) from the config/sample:
 
-```shell
-helm uninstall eck-cr
+```sh
+kubectl apply -k config/samples/
 ```
 
-This removes all resources related to eck-custom-resources operator. It won't remove the CRDs nor any deployed custom resource
-(e.g. Index, Index Template ...), they will remain in K8s and also in Elasticsearch.
+>**NOTE**: Ensure that the samples has default values to test it out.
 
-## Working with custom resources
-After the operator is installed, you can deploy Elasticsearch/Kibana resources from the list above. The reconciler
-will take care of propagating the change to Elasticsearch or Kibana, whether it is creation of new resource, deletion
-or update. Definition of target Elasticsearch/Kibana is done using [Elasticsearch Instance](docs/cr_elasticsearch_instance.md) and 
-[Kibana Instance](docs/cr_kibana_instance.md) resources. These are then referenced (by name) from other resources through `spec.targetInstance.name` field.
+### To Uninstall
+**Delete the instances (CRs) from the cluster:**
 
-For detailed documentation for each resource, see [List of supported resources](docs/cr_list.md)
+```sh
+kubectl delete -k config/samples/
+```
 
-## Help and Troubleshooting
-In case you need help or found a bug, please create an [Issue on Github](https://github.com/xco-sk/eck-custom-resources/issues).
+**Delete the APIs(CRDs) from the cluster:**
+
+```sh
+make uninstall
+```
+
+**UnDeploy the controller from the cluster:**
+
+```sh
+make undeploy
+```
+
+## Project Distribution
+
+Following the options to release and provide this solution to the users.
+
+### By providing a bundle with all YAML files
+
+1. Build the installer for the image built and published in the registry:
+
+```sh
+make build-installer IMG=<some-registry>/eck-custom-resources:tag
+```
+
+**NOTE:** The makefile target mentioned above generates an 'install.yaml'
+file in the dist directory. This file contains all the resources built
+with Kustomize, which are necessary to install this project without its
+dependencies.
+
+2. Using the installer
+
+Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
+the project, i.e.:
+
+```sh
+kubectl apply -f https://raw.githubusercontent.com/<org>/eck-custom-resources/<tag or branch>/dist/install.yaml
+```
+
+### By providing a Helm Chart
+
+1. Build the chart using the optional helm plugin
+
+```sh
+kubebuilder edit --plugins=helm/v1-alpha
+```
+
+2. See that a chart was generated under 'dist/chart', and users
+can obtain this solution from there.
+
+**NOTE:** If you change the project, you need to update the Helm Chart
+using the same command above to sync the latest changes. Furthermore,
+if you create webhooks, you need to use the above command with
+the '--force' flag and manually ensure that any custom configuration
+previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
+is manually re-applied afterwards.
+
+## Contributing
+// TODO(user): Add detailed information on how you would like others to contribute to this project
+
+**NOTE:** Run `make help` for more information on all potential `make` targets
+
+More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
 ## License
-Licensed under the Apache License, Version 2.0; see [LICENSE.md](LICENSE.md)
+
+Copyright 2025.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+

@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	kibanaeckv1alpha1 "github.com/xco-sk/eck-custom-resources/apis/kibana.eck/v1alpha1"
-	"github.com/xco-sk/eck-custom-resources/utils"
+	kibanaeckv1alpha1 "eck-custom-resources/api/kibana.eck/v1alpha1"
+	"eck-custom-resources/utils"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 

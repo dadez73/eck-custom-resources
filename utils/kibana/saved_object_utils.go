@@ -1,14 +1,15 @@
 package kibana
 
 import (
+	kibanaeckv1alpha1 "eck-custom-resources/api/kibana.eck/v1alpha1"
+	"eck-custom-resources/utils"
 	"fmt"
-	kibanaeckv1alpha1 "github.com/xco-sk/eck-custom-resources/apis/kibana.eck/v1alpha1"
-	"github.com/xco-sk/eck-custom-resources/utils"
 	"io/ioutil"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
-	ctrl "sigs.k8s.io/controller-runtime"
 	"strings"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 func DeleteSavedObject(kClient Client, savedObjectType string, savedObjectMeta metav1.ObjectMeta, savedObject kibanaeckv1alpha1.SavedObject) (ctrl.Result, error) {

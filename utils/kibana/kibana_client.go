@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"strings"
 
-	configv2 "github.com/xco-sk/eck-custom-resources/apis/config/v2"
-	"github.com/xco-sk/eck-custom-resources/utils"
+	configv2 "eck-custom-resources/api/config/v2"
+	"eck-custom-resources/utils"
+
 	k8sv1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"

@@ -1,20 +1,9 @@
 apiVersion: es.eck.github.com/v1alpha1
 kind: IngestPipeline
 metadata:
+  labels:
+    app.kubernetes.io/name: eck-custom-resources
+    app.kubernetes.io/managed-by: kustomize
   name: ingestpipeline-sample
 spec:
-  targetInstance:
-    name: elasticsearch-quickstart
-  body: |
-    {
-      "description" : "Ingest pipeline sample",
-      "processors" : [
-        {
-          "set" : {
-            "description" : "Ingest pipeline sample processor",
-            "field": "eck-custom-resources",
-            "value": "true"
-          }
-        }
-      ]
-    }
+  # TODO(user): Add fields here

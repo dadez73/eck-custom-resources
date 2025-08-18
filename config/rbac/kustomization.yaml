@@ -9,10 +9,74 @@ resources:
 - role_binding.yaml
 - leader_election_role.yaml
 - leader_election_role_binding.yaml
-# Comment the following 4 lines if you want to disable
-# the auth proxy (https://github.com/brancz/kube-rbac-proxy)
-# which protects your /metrics endpoint.
-- auth_proxy_service.yaml
-- auth_proxy_role.yaml
-- auth_proxy_role_binding.yaml
-- auth_proxy_client_clusterrole.yaml
+# The following RBAC configurations are used to protect
+# the metrics endpoint with authn/authz. These configurations
+# ensure that only authorized users and service accounts
+# can access the metrics endpoint. Comment the following
+# permissions if you want to disable this protection.
+# More info: https://book.kubebuilder.io/reference/metrics.html
+- metrics_auth_role.yaml
+- metrics_auth_role_binding.yaml
+- metrics_reader_role.yaml
+# For each CRD, "Admin", "Editor" and "Viewer" roles are scaffolded by
+# default, aiding admins in cluster management. Those roles are
+# not used by the eck-custom-resources itself. You can comment the following lines
+# if you do not want those helpers be installed with your Project.
+- es.eck_componenttemplate_admin_role.yaml
+- es.eck_componenttemplate_editor_role.yaml
+- es.eck_componenttemplate_viewer_role.yaml
+- es.eck_elasticsearchinstance_admin_role.yaml
+- es.eck_elasticsearchinstance_editor_role.yaml
+- es.eck_elasticsearchinstance_viewer_role.yaml
+- kibana.eck_kibanainstance_admin_role.yaml
+- kibana.eck_kibanainstance_editor_role.yaml
+- kibana.eck_kibanainstance_viewer_role.yaml
+- kibana.eck_dataview_admin_role.yaml
+- kibana.eck_dataview_editor_role.yaml
+- kibana.eck_dataview_viewer_role.yaml
+- kibana.eck_lens_admin_role.yaml
+- kibana.eck_lens_editor_role.yaml
+- kibana.eck_lens_viewer_role.yaml
+- kibana.eck_space_admin_role.yaml
+- kibana.eck_space_editor_role.yaml
+- kibana.eck_space_viewer_role.yaml
+- es.eck_elasticsearchuser_admin_role.yaml
+- es.eck_elasticsearchuser_editor_role.yaml
+- es.eck_elasticsearchuser_viewer_role.yaml
+- es.eck_elasticsearchrole_admin_role.yaml
+- es.eck_elasticsearchrole_editor_role.yaml
+- es.eck_elasticsearchrole_viewer_role.yaml
+- kibana.eck_dashboard_admin_role.yaml
+- kibana.eck_dashboard_editor_role.yaml
+- kibana.eck_dashboard_viewer_role.yaml
+- kibana.eck_visualization_admin_role.yaml
+- kibana.eck_visualization_editor_role.yaml
+- kibana.eck_visualization_viewer_role.yaml
+- kibana.eck_indexpattern_admin_role.yaml
+- kibana.eck_indexpattern_editor_role.yaml
+- kibana.eck_indexpattern_viewer_role.yaml
+- kibana.eck_savedsearch_admin_role.yaml
+- kibana.eck_savedsearch_editor_role.yaml
+- kibana.eck_savedsearch_viewer_role.yaml
+- es.eck_snapshotrepository_admin_role.yaml
+- es.eck_snapshotrepository_editor_role.yaml
+- es.eck_snapshotrepository_viewer_role.yaml
+- es.eck_ingestpipeline_admin_role.yaml
+- es.eck_ingestpipeline_editor_role.yaml
+- es.eck_ingestpipeline_viewer_role.yaml
+- es.eck_snapshotlifecyclepolicy_admin_role.yaml
+- es.eck_snapshotlifecyclepolicy_editor_role.yaml
+- es.eck_snapshotlifecyclepolicy_viewer_role.yaml
+- es.eck_indexlifecyclepolicy_admin_role.yaml
+- es.eck_indexlifecyclepolicy_editor_role.yaml
+- es.eck_indexlifecyclepolicy_viewer_role.yaml
+- config_projectconfig_admin_role.yaml
+- config_projectconfig_editor_role.yaml
+- config_projectconfig_viewer_role.yaml
+- es.eck_indextemplate_admin_role.yaml
+- es.eck_indextemplate_editor_role.yaml
+- es.eck_indextemplate_viewer_role.yaml
+- es.eck_index_admin_role.yaml
+- es.eck_index_editor_role.yaml
+- es.eck_index_viewer_role.yaml
+

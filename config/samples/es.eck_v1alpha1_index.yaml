@@ -1,27 +1,9 @@
 apiVersion: es.eck.github.com/v1alpha1
 kind: Index
 metadata:
+  labels:
+    app.kubernetes.io/name: eck-custom-resources
+    app.kubernetes.io/managed-by: kustomize
   name: index-sample
 spec:
-  targetInstance:
-    name: elasticsearch-quickstart
-  dependencies:
-    indexTemplates:
-      - indextemplate-sample
-    indices:
-      - index-base-sample
-  body: |
-    {
-      "settings": {
-        "number_of_shards": 1,
-        "number_of_replicas": 0
-      },
-      "mappings": {
-          "properties": {
-            "field1": { "type": "text" }
-          }
-      },
-      "aliases": {
-          "index-sample-alias": {}
-      }
-    }
+  # TODO(user): Add fields here

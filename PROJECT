@@ -2,12 +2,13 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
+cliVersion: 4.7.1
 domain: github.com
 layout:
-- go.kubebuilder.io/v3
+- go.kubebuilder.io/v4
 multigroup: true
 projectName: eck-custom-resources
-repo: github.com/xco-sk/eck-custom-resources
+repo: eck-custom-resources
 resources:
 - api:
     crdVersion: v1
@@ -16,7 +17,7 @@ resources:
   domain: github.com
   group: es.eck
   kind: Index
-  path: github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1
+  path: eck-custom-resources/api/es.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -25,7 +26,7 @@ resources:
   domain: github.com
   group: es.eck
   kind: IndexTemplate
-  path: github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1
+  path: eck-custom-resources/api/es.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -33,7 +34,7 @@ resources:
   domain: github.com
   group: config
   kind: ProjectConfig
-  path: github.com/xco-sk/eck-custom-resources/apis/config/v2
+  path: eck-custom-resources/api/config/v2
   version: v2
 - api:
     crdVersion: v1
@@ -42,7 +43,7 @@ resources:
   domain: github.com
   group: es.eck
   kind: IndexLifecyclePolicy
-  path: github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1
+  path: eck-custom-resources/api/es.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -51,7 +52,7 @@ resources:
   domain: github.com
   group: es.eck
   kind: SnapshotLifecyclePolicy
-  path: github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1
+  path: eck-custom-resources/api/es.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -60,7 +61,7 @@ resources:
   domain: github.com
   group: es.eck
   kind: IngestPipeline
-  path: github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1
+  path: eck-custom-resources/api/es.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -69,7 +70,7 @@ resources:
   domain: github.com
   group: es.eck
   kind: SnapshotRepository
-  path: github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1
+  path: eck-custom-resources/api/es.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -78,7 +79,7 @@ resources:
   domain: github.com
   group: kibana.eck
   kind: SavedSearch
-  path: github.com/xco-sk/eck-custom-resources/apis/kibana.eck/v1alpha1
+  path: eck-custom-resources/api/kibana.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -87,7 +88,7 @@ resources:
   domain: github.com
   group: kibana.eck
   kind: IndexPattern
-  path: github.com/xco-sk/eck-custom-resources/apis/kibana.eck/v1alpha1
+  path: eck-custom-resources/api/kibana.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -96,7 +97,7 @@ resources:
   domain: github.com
   group: kibana.eck
   kind: Visualization
-  path: github.com/xco-sk/eck-custom-resources/apis/kibana.eck/v1alpha1
+  path: eck-custom-resources/api/kibana.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -105,7 +106,7 @@ resources:
   domain: github.com
   group: kibana.eck
   kind: Dashboard
-  path: github.com/xco-sk/eck-custom-resources/apis/kibana.eck/v1alpha1
+  path: eck-custom-resources/api/kibana.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -114,7 +115,7 @@ resources:
   domain: github.com
   group: es.eck
   kind: ElasticsearchRole
-  path: github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1
+  path: eck-custom-resources/api/es.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -123,7 +124,7 @@ resources:
   domain: github.com
   group: es.eck
   kind: ElasticsearchUser
-  path: github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1
+  path: eck-custom-resources/api/es.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -132,7 +133,7 @@ resources:
   domain: github.com
   group: kibana.eck
   kind: Space
-  path: github.com/xco-sk/eck-custom-resources/apis/kibana.eck/v1alpha1
+  path: eck-custom-resources/api/kibana.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -141,7 +142,7 @@ resources:
   domain: github.com
   group: kibana.eck
   kind: Lens
-  path: github.com/xco-sk/eck-custom-resources/apis/kibana.eck/v1alpha1
+  path: eck-custom-resources/api/kibana.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -150,7 +151,7 @@ resources:
   domain: github.com
   group: kibana.eck
   kind: DataView
-  path: github.com/xco-sk/eck-custom-resources/apis/kibana.eck/v1alpha1
+  path: eck-custom-resources/api/kibana.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -159,7 +160,7 @@ resources:
   domain: github.com
   group: kibana.eck
   kind: KibanaInstance
-  path: github.com/xco-sk/eck-custom-resources/apis/kibana.eck/v1alpha1
+  path: eck-custom-resources/api/kibana.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -168,7 +169,7 @@ resources:
   domain: github.com
   group: es.eck
   kind: ElasticsearchInstance
-  path: github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1
+  path: eck-custom-resources/api/es.eck/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -177,6 +178,6 @@ resources:
   domain: github.com
   group: es.eck
   kind: ComponentTemplate
-  path: github.com/xco-sk/eck-custom-resources/apis/es.eck/v1alpha1
+  path: eck-custom-resources/api/es.eck/v1alpha1
   version: v1alpha1
 version: "3"
