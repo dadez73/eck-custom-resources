@@ -9,12 +9,12 @@ manager:
   webhook:
     port: 9443
   leaderElection:
-    leaderElect: true
+    leaderElect: false
     resourceName: d47cd155.github.com
     resourceNamespace: default
 elasticsearch:
   enabled: true
-  url: https://quickstart-es-http:9200
+  url: http://gecodev-eck-kb-kb-http:9200
   certificate:
     secretName: quickstart-es-http-certs-public
     certificateKey: ca.crt
@@ -24,11 +24,11 @@ elasticsearch:
       userName: elastic
 kibana:
   enabled: true
-  url: https://quickstart-kb-http:5601
+  url: http://gecodev-eck-kb-kb-http:5601
   certificate:
     secretName: quickstart-kb-http-certs-public
     certificateKey: ca.crt
   authentication:
     usernamePasswordSecret:
-      secretName: quickstart-es-elastic-user
+      secretName: gecodev-eck-kb-kb-http
       userName: elastic
