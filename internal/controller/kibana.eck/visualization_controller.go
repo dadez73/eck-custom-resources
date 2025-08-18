@@ -127,7 +127,7 @@ func (r *VisualizationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *VisualizationReconciler) getTargetInstance(object runtime.Object, TargetConfig kibanaeckv1alpha1.CommonKibanaConfig, ctx context.Context, namespace string) (*configv2.KibanaSpec, error) {
-	targetInstance := r.ProjectConfig.Kibana
+	targetInstance := r.ProjectConfig.Spec.Kibana
 	if TargetConfig.KibanaInstance != "" {
 		var resourceInstance kibanaeckv1alpha1.KibanaInstance
 		if err := kibanaUtils.GetTargetInstance(r.Client, ctx, namespace, TargetConfig.KibanaInstance, &resourceInstance); err != nil {

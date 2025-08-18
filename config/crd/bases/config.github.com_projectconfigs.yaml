@@ -39,10 +39,96 @@ spec:
           spec:
             description: spec defines the desired state of ProjectConfig
             properties:
-              foo:
+              elasticsearch:
                 description: foo is an example field of ProjectConfig. Edit projectconfig_types.go
                   to remove/update
-                type: string
+                properties:
+                  authentication:
+                    description: ElasticsearchAuthentication Definition of Elasticsearch
+                      authentication
+                    properties:
+                      usernamePasswordSecret:
+                        description: UsernamePasswordAuthentication Definition of
+                          Username/Password authentication
+                        properties:
+                          secretName:
+                            minLength: 0
+                            type: string
+                          userName:
+                            minLength: 0
+                            type: string
+                        required:
+                        - secretName
+                        - userName
+                        type: object
+                    type: object
+                  certificate:
+                    description: PublicCertificate Configuration for public certificate
+                      used for communication with target
+                    properties:
+                      certificateKey:
+                        minLength: 0
+                        type: string
+                      secretName:
+                        minLength: 0
+                        type: string
+                    required:
+                    - certificateKey
+                    - secretName
+                    type: object
+                  enabled:
+                    type: boolean
+                  url:
+                    minLength: 0
+                    type: string
+                required:
+                - enabled
+                - url
+                type: object
+              kibana:
+                description: KibanaSpec Definition of target elasticsearch cluster
+                properties:
+                  authentication:
+                    description: KibanaAuthentication Definition of Kibana authentication
+                    properties:
+                      usernamePasswordSecret:
+                        description: UsernamePasswordAuthentication Definition of
+                          Username/Password authentication
+                        properties:
+                          secretName:
+                            minLength: 0
+                            type: string
+                          userName:
+                            minLength: 0
+                            type: string
+                        required:
+                        - secretName
+                        - userName
+                        type: object
+                    type: object
+                  certificate:
+                    description: PublicCertificate Configuration for public certificate
+                      used for communication with target
+                    properties:
+                      certificateKey:
+                        minLength: 0
+                        type: string
+                      secretName:
+                        minLength: 0
+                        type: string
+                    required:
+                    - certificateKey
+                    - secretName
+                    type: object
+                  enabled:
+                    type: boolean
+                  url:
+                    minLength: 0
+                    type: string
+                required:
+                - enabled
+                - url
+                type: object
             type: object
           status:
             description: status defines the observed state of ProjectConfig

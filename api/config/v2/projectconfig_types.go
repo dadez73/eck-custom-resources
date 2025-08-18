@@ -32,7 +32,8 @@ type ProjectConfigSpec struct {
 
 	// foo is an example field of ProjectConfig. Edit projectconfig_types.go to remove/update
 	// +optional
-	Foo *string `json:"foo,omitempty"`
+	Elasticsearch ElasticsearchSpec `json:"elasticsearch,omitempty"`
+	Kibana        KibanaSpec        `json:"kibana,omitempty"`
 }
 
 // ProjectConfigStatus defines the observed state of ProjectConfig.
