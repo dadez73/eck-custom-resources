@@ -31,6 +31,11 @@ type ElasticsearchUserSpec struct {
 
 // ElasticsearchUserStatus defines the observed state of ElasticsearchUser
 type ElasticsearchUserStatus struct {
+	// +kubebuilder:validation:Format=int64
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true

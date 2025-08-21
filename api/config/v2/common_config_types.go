@@ -19,3 +19,9 @@ type PublicCertificate struct {
 	// +kubebuilder:validation:MinLength=0
 	CertificateKey string `json:"certificateKey"`
 }
+
+// APIKey Definition of APIKey authentication
+type APIKeyAuthentication struct {
+	// +kubebuilder:validation:MinLength=0
+	APIKey string `json:"apiKey"`
+}

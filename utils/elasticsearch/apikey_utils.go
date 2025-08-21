@@ -85,17 +85,15 @@ func CreateApikey(cli client.Client, ctx context.Context, esClient *elasticsearc
 		// We only ensure id is correct; encodedKey is only known at creation time.
 		if containsID(getResp.APIKeys, apikeyId) {
 			// If this is an UPDATE event: update only the "body"
-			fmt.Println("If this is an UPDATE event: update only the body")
 
-			if apikey.Status.Ready {
-				fmt.Printf("If this is an UPDATE event: update only the body apikey.Status.Ready")
-				if _, err := esClient.Security.UpdateAPIKey(
-					apikeyId,
-					esClient.Security.UpdateAPIKey.WithBody(strings.NewReader(apikey.Spec.Body)),
-					esClient.Security.UpdateAPIKey.WithContext(context.Background()),
-				); err != nil {
-					return utils.GetRequeueResult(), fmt.Errorf("error updating APIKey response: %w", err)
-				}
+			apiBody, _ := removeNameField(apikey.Spec.Body)
+
+			if _, err := esClient.Security.UpdateAPIKey(
+				apikeyId,
+				esClient.Security.UpdateAPIKey.WithBody(strings.NewReader(apiBody)),
+				esClient.Security.UpdateAPIKey.WithContext(context.Background()),
+			); err != nil {
+				return utils.GetRequeueResult(), fmt.Errorf("error updating APIKey response: %w", err)
 			}
 		}
 	default:
@@ -146,8 +144,6 @@ func CreateApikey(cli client.Client, ctx context.Context, esClient *elasticsearc
 		if err := CreateApikeySecret(cli, ctx, req.Namespace, req.Name, data); err != nil {
 			return utils.GetRequeueResult(), err
 		}
-
-		apikey.Status.Ready = true
 		apikey.Status.APIKeyID = apikeyId
 		if err := cli.Status().Update(ctx, &apikey); err != nil {
 			return utils.GetRequeueResult(), fmt.Errorf("error updating API key status: %s", response.String())
@@ -236,4 +232,23 @@ func containsID(apiKeys []struct {
 		}
 	}
 	return false
+}
+func removeNameField(input string) (string, error) {
+	var data map[string]interface{}
+
+	// Unmarshal JSON string into a map
+	if err := json.Unmarshal([]byte(input), &data); err != nil {
+		return "", err
+	}
+
+	// Remove "name" field
+	delete(data, "name")
+
+	// Marshal back to JSON string
+	output, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	return string(output), nil
 }

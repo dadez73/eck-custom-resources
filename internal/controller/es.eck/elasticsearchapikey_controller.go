@@ -25,15 +25,15 @@ import (
 	"eck-custom-resources/utils"
 	esutils "eck-custom-resources/utils/elasticsearch"
 
-	"k8s.io/client-go/tools/record"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-
+	eseckv1alpha1 "eck-custom-resources/api/es.eck/v1alpha1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	eseckv1alpha1 "eck-custom-resources/api/es.eck/v1alpha1"
 )
 
 // ElasticsearchApikeyReconciler reconciles a ElasticsearchApikey object
@@ -58,6 +58,11 @@ func (r *ElasticsearchApikeyReconciler) Reconcile(ctx context.Context, req ctrl.
 	if err := r.Get(ctx, req.NamespacedName, &apikey); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	// Keep an old copy of status for MergeFrom patches
+	oldStatus := apikey.Status.DeepCopy()
+
+	// Convenience locals
+	desiredGen := apikey.GetGeneration()
 
 	targetInstance, err := r.getTargetInstance(&apikey, apikey.Spec.TargetConfig, ctx, req.Namespace)
 	if err != nil {
@@ -90,19 +95,55 @@ func (r *ElasticsearchApikeyReconciler) Reconcile(ctx context.Context, req ctrl.
 			return ctrl.Result{Requeue: true}, nil
 
 		} else {
+			if apikey.Status.ObservedGeneration < desiredGen {
+				// Normal reconcile path
+				logger.Info("Creating/Updating API key", "name", req.NamespacedName)
+				_, err := esutils.CreateApikey(r.Client, ctx, esClient, apikey, req)
 
-			// Normal reconcile path
-			logger.Info("Creating/Updating API key", "name", req.NamespacedName)
-			res, err := esutils.CreateApikey(r.Client, ctx, esClient, apikey, req)
+				if err != nil {
+					r.Recorder.Event(&apikey, "Warning", "ReconcileError",
+						fmt.Sprintf("Failed to create/update %s/%s %q: %v", apikey.APIVersion, apikey.Kind, apikey.Name, err))
 
-			if err != nil {
-				r.Recorder.Event(&apikey, "Warning", "ReconcileError",
-					fmt.Sprintf("Failed to create/update %s/%s %q: %v", apikey.APIVersion, apikey.Kind, apikey.Name, err))
-				return res, err
+					// We *saw* the new generation, but failed to make it ready.
+					setCondition(&apikey, metav1.Condition{
+						Type:               "Ready",
+						Status:             metav1.ConditionFalse,
+						Reason:             "ReconcileError",
+						Message:            err.Error(),
+						ObservedGeneration: desiredGen,
+						LastTransitionTime: metav1.Now(),
+					})
+					// Do NOT bump .status.observedGeneration yet.
+					// Patch only status with the new condition.
+					if perr := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); perr != nil {
+						r.Recorder.Event(&apikey, "Warning", "patching",
+							fmt.Sprintf("patching status after error %v", perr))
+					}
+					return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+
+				}
 			}
+
+			setCondition(&apikey, metav1.Condition{
+				Type:               "Ready",
+				Status:             metav1.ConditionTrue,
+				Reason:             "Reconciled",
+				Message:            "Resources are in desired state",
+				ObservedGeneration: desiredGen,
+				LastTransitionTime: metav1.Now(),
+			})
+
+			// Now it's safe to bump observedGeneration
+			apikey.Status.ObservedGeneration = desiredGen
+
+			if err := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); err != nil {
+				return ctrl.Result{}, err
+			}
+
 			r.Recorder.Event(&apikey, "Normal", "Reconciled",
 				fmt.Sprintf("Created/Updated %s/%s %q", apikey.APIVersion, apikey.Kind, apikey.Name))
-			return res, nil
+
+			return ctrl.Result{}, nil
 		}
 	}
 
@@ -141,6 +182,13 @@ func (r *ElasticsearchApikeyReconciler) getTargetInstance(object runtime.Object,
 		targetInstance = resourceInstance.Spec
 	}
 	return &targetInstance, nil
+}
+
+func setCondition(obj *eseckv1alpha1.ElasticsearchApikey, c metav1.Condition) {
+	// Update or add by Type
+	conds := obj.Status.Conditions
+	meta.SetStatusCondition(&conds, c)
+	obj.Status.Conditions = conds
 }
 
 // SetupWithManager sets up the controller with the Manager.

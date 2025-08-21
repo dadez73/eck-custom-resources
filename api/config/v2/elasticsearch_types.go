@@ -35,4 +35,6 @@ type ElasticsearchSpec struct {
 type ElasticsearchAuthentication struct {
 	// +optional
 	UsernamePassword *UsernamePasswordAuthentication `json:"usernamePasswordSecret,omitempty"`
+	// +optional
+	APIKey *APIKeyAuthentication `json:"apiKey,omitempty"`
 }

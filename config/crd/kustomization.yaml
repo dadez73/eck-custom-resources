@@ -15,6 +15,7 @@ resources:
 - bases/kibana.eck.github.com_dashboards.yaml
 - bases/es.eck.github.com_elasticsearchroles.yaml
 - bases/es.eck.github.com_elasticsearchusers.yaml
+- bases/es.eck.github.com_elasticsearchapikeys.yaml
 - bases/kibana.eck.github.com_spaces.yaml
 - bases/kibana.eck.github.com_lens.yaml
 - bases/kibana.eck.github.com_dataviews.yaml
