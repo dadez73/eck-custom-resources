@@ -30,6 +30,8 @@ type ElasticsearchApikeySpec struct {
 
 // ElasticsearchApikeyStatus defines the observed state of ElasticsearchApikey
 type ElasticsearchApikeyStatus struct {
+	APIKeyID string `json:"apiKeyID,omitempty"`
+	Ready    bool   `json:"ready,omitempty"`
 }
 
 //+kubebuilder:object:root=true

@@ -1,0 +1,20 @@
+elasticsearch:
+  enabled: true
+  url: https://es.gecodev.eoc.ch
+  certificate:
+    secretName: quickstart-es-http-certs-public
+    certificateKey: ca.crt
+  authentication:
+    usernamePasswordSecret:
+      secretName: quickstart-es-elastic-user
+      userName: elastic
+kibana:
+  enabled: true
+  url: https://es.gecodev.eoc.ch/
+  certificate:
+    secretName: quickstart-kb-http-certs-public
+    certificateKey: ca.crt
+  authentication:
+    usernamePasswordSecret:
+      secretName: gecodev-eck-kb-kb-http
+      userName: elastic

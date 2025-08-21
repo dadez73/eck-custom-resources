@@ -37,7 +37,7 @@ import (
 type ComponentTemplateReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
-	ProjectConfig configv2.ProjectConfig
+	ProjectConfig configv2.ProjectConfigSpec
 	Recorder      record.EventRecorder
 }
 
@@ -101,7 +101,7 @@ func (r *ComponentTemplateReconciler) Reconcile(ctx context.Context, req ctrl.Re
 }
 
 func (r *ComponentTemplateReconciler) getTargetInstance(object runtime.Object, TargetConfig eseckv1alpha1.CommonElasticsearchConfig, ctx context.Context, namespace string) (*configv2.ElasticsearchSpec, error) {
-	targetInstance := r.ProjectConfig.Spec.Elasticsearch
+	targetInstance := r.ProjectConfig.Elasticsearch
 	if TargetConfig.ElasticsearchInstance != "" {
 		var resourceInstance eseckv1alpha1.ElasticsearchInstance
 		if err := esutils.GetTargetElasticsearchInstance(r.Client, ctx, namespace, TargetConfig.ElasticsearchInstance, &resourceInstance); err != nil {

@@ -20,7 +20,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -81,7 +81,7 @@ var _ = BeforeSuite(func() {
 	err = (&DashboardReconciler{
 		Client:        k8sManager.GetClient(),
 		Scheme:        scheme.Scheme,
-		ProjectConfig: v2.ProjectConfig{},
+		ProjectConfig: v2.ProjectConfigSpec{},
 		Recorder:      k8sManager.GetEventRecorderFor("dashboard"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -89,7 +89,7 @@ var _ = BeforeSuite(func() {
 	err = (&DataViewReconciler{
 		Client:        k8sManager.GetClient(),
 		Scheme:        scheme.Scheme,
-		ProjectConfig: v2.ProjectConfig{},
+		ProjectConfig: v2.ProjectConfigSpec{},
 		Recorder:      k8sManager.GetEventRecorderFor("data-view"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -97,7 +97,7 @@ var _ = BeforeSuite(func() {
 	err = (&IndexPatternReconciler{
 		Client:        k8sManager.GetClient(),
 		Scheme:        scheme.Scheme,
-		ProjectConfig: v2.ProjectConfig{},
+		ProjectConfig: v2.ProjectConfigSpec{},
 		Recorder:      k8sManager.GetEventRecorderFor("index-pattern"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -105,7 +105,7 @@ var _ = BeforeSuite(func() {
 	err = (&LensReconciler{
 		Client:        k8sManager.GetClient(),
 		Scheme:        scheme.Scheme,
-		ProjectConfig: v2.ProjectConfig{},
+		ProjectConfig: v2.ProjectConfigSpec{},
 		Recorder:      k8sManager.GetEventRecorderFor("lens"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -113,7 +113,7 @@ var _ = BeforeSuite(func() {
 	err = (&SavedSearchReconciler{
 		Client:        k8sManager.GetClient(),
 		Scheme:        scheme.Scheme,
-		ProjectConfig: v2.ProjectConfig{},
+		ProjectConfig: v2.ProjectConfigSpec{},
 		Recorder:      k8sManager.GetEventRecorderFor("saved-search"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -121,7 +121,7 @@ var _ = BeforeSuite(func() {
 	err = (&SpaceReconciler{
 		Client:        k8sManager.GetClient(),
 		Scheme:        scheme.Scheme,
-		ProjectConfig: v2.ProjectConfig{},
+		ProjectConfig: v2.ProjectConfigSpec{},
 		Recorder:      k8sManager.GetEventRecorderFor("space"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
@@ -129,7 +129,7 @@ var _ = BeforeSuite(func() {
 	err = (&VisualizationReconciler{
 		Client:        k8sManager.GetClient(),
 		Scheme:        scheme.Scheme,
-		ProjectConfig: v2.ProjectConfig{},
+		ProjectConfig: v2.ProjectConfigSpec{},
 		Recorder:      k8sManager.GetEventRecorderFor("visualization"),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())

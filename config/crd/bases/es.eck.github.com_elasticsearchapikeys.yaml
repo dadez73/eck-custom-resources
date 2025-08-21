@@ -52,6 +52,11 @@ spec:
             type: object
           status:
             description: ElasticsearchApikeyStatus defines the observed state of ElasticsearchApikey
+            properties:
+              apiKeyID:
+                type: string
+              ready:
+                type: boolean
             type: object
         type: object
     served: true

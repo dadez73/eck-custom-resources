@@ -21,6 +21,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -30,6 +31,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -40,6 +42,7 @@ import (
 	configv2 "eck-custom-resources/api/config/v2"
 	eseckv1alpha1 "eck-custom-resources/api/es.eck/v1alpha1"
 	kibanaeckv1alpha1 "eck-custom-resources/api/kibana.eck/v1alpha1"
+	"eck-custom-resources/internal/config"
 	eseckcontroller "eck-custom-resources/internal/controller/es.eck"
 	kibanaeckcontroller "eck-custom-resources/internal/controller/kibana.eck"
 	// +kubebuilder:scaffold:imports
@@ -69,9 +72,16 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
+	var configFile string
+	var syncPeriod int
+	flag.StringVar(&configFile, "config", "",
+		"The controller will load its initial configuration from this file. "+
+			"Omit this flag to use the default configuration values. "+
+			"Command-line flags override configuration from this file.")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.IntVar(&syncPeriod, "sync-period", 10, "The period between reconciles.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -107,6 +117,11 @@ func main() {
 
 	if !enableHTTP2 {
 		tlsOpts = append(tlsOpts, disableHTTP2)
+	}
+
+	ctrlConfig, err := config.LoadProjectConfigSpec(configFile)
+	if err != nil {
+		setupLog.Error(err, "Failed to load ProjectConfigSpec")
 	}
 
 	// Create watchers for metrics and webhooks certificates
@@ -182,7 +197,7 @@ func main() {
 			config.GetCertificate = metricsCertWatcher.GetCertificate
 		})
 	}
-
+	d := time.Duration(syncPeriod) * time.Minute
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
 		Metrics:                metricsServerOptions,
@@ -190,6 +205,9 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "5da2fcc2.github.com",
+		Cache: cache.Options{
+			SyncPeriod: &d, // periodic resync for all watched kinds
+		},
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -206,129 +224,155 @@ func main() {
 		setupLog.Error(err, "unable to start manager")
 		os.Exit(1)
 	}
-
-	if err := (&eseckcontroller.IndexReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&eseckcontroller.IndexReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("index_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Index")
 		os.Exit(1)
 	}
-	if err := (&eseckcontroller.IndexTemplateReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&eseckcontroller.IndexTemplateReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("indextemplate_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IndexTemplate")
 		os.Exit(1)
 	}
-	if err := (&eseckcontroller.IndexLifecyclePolicyReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&eseckcontroller.IndexLifecyclePolicyReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("indexlifecyclepolicy_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IndexLifecyclePolicy")
 		os.Exit(1)
 	}
-	if err := (&eseckcontroller.SnapshotLifecyclePolicyReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&eseckcontroller.SnapshotLifecyclePolicyReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("snapshotlifecyclepolicy_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SnapshotLifecyclePolicy")
 		os.Exit(1)
 	}
-	if err := (&eseckcontroller.IngestPipelineReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&eseckcontroller.IngestPipelineReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("ingestpipeline_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IngestPipeline")
 		os.Exit(1)
 	}
-	if err := (&eseckcontroller.SnapshotRepositoryReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&eseckcontroller.SnapshotRepositoryReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("snapshotrepository_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SnapshotRepository")
 		os.Exit(1)
 	}
-	if err := (&kibanaeckcontroller.SavedSearchReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&kibanaeckcontroller.SavedSearchReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("savedsearch_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SavedSearch")
 		os.Exit(1)
 	}
-	if err := (&kibanaeckcontroller.IndexPatternReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&kibanaeckcontroller.IndexPatternReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("indexpattern_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "IndexPattern")
 		os.Exit(1)
 	}
-	if err := (&kibanaeckcontroller.VisualizationReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&kibanaeckcontroller.VisualizationReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("visualization_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Visualization")
 		os.Exit(1)
 	}
-	if err := (&kibanaeckcontroller.DashboardReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&kibanaeckcontroller.DashboardReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("dashboard_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Dashboard")
 		os.Exit(1)
 	}
-	if err := (&eseckcontroller.ElasticsearchRoleReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&eseckcontroller.ElasticsearchRoleReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("elasticsearchrole_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchRole")
 		os.Exit(1)
 	}
-	if err := (&eseckcontroller.ElasticsearchUserReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&eseckcontroller.ElasticsearchUserReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("elasticsearchuser_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchUser")
 		os.Exit(1)
 	}
-	if err := (&kibanaeckcontroller.SpaceReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&eseckcontroller.ElasticsearchApikeyReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("elasticsearchapikey_controller"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchApikey")
+		os.Exit(1)
+	}
+	if err = (&kibanaeckcontroller.SpaceReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("kibanaspace_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Space")
 		os.Exit(1)
 	}
-	if err := (&kibanaeckcontroller.LensReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&kibanaeckcontroller.LensReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("kibanalens_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Lens")
 		os.Exit(1)
 	}
-	if err := (&kibanaeckcontroller.DataViewReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&kibanaeckcontroller.DataViewReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("kibanadataview_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DataView")
 		os.Exit(1)
 	}
-	if err := (&kibanaeckcontroller.KibanaInstanceReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "KibanaInstance")
-		os.Exit(1)
-	}
-	if err := (&eseckcontroller.ElasticsearchInstanceReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ElasticsearchInstance")
-		os.Exit(1)
-	}
-	if err := (&eseckcontroller.ComponentTemplateReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+	if err = (&eseckcontroller.ComponentTemplateReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ProjectConfig: ctrlConfig,
+		Recorder:      mgr.GetEventRecorderFor("componenttemplate_controller"),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ComponentTemplate")
 		os.Exit(1)

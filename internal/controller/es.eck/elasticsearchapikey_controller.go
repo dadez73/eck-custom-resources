@@ -19,6 +19,7 @@ package eseck
 import (
 	"context"
 	"fmt"
+	"time"
 
 	configv2 "eck-custom-resources/api/config/v2"
 	"eck-custom-resources/utils"
@@ -39,7 +40,7 @@ import (
 type ElasticsearchApikeyReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
-	ProjectConfig configv2.ProjectConfig
+	ProjectConfig configv2.ProjectConfigSpec
 	Recorder      record.EventRecorder
 }
 
@@ -74,45 +75,62 @@ func (r *ElasticsearchApikeyReconciler) Reconcile(ctx context.Context, req ctrl.
 		return utils.GetRequeueResult(), client.IgnoreNotFound(createClientErr)
 	}
 
-	if apikey.ObjectMeta.DeletionTimestamp.IsZero() {
-		logger.Info("Creating/Updating Apikey", "apikey", req.Name)
-		res, err := esutils.CreateApikey(r.Client, ctx, esClient, apikey, req)
-
-		if err == nil {
-			r.Recorder.Event(&apikey, "Normal", "Created",
-				fmt.Sprintf("Created/Updated %s/%s %s", apikey.APIVersion, apikey.Kind, apikey.Name))
-		} else {
-			r.Recorder.Event(&apikey, "Warning", "Failed to create/update",
-				fmt.Sprintf("Failed to create/update %s/%s %s: %s", apikey.APIVersion, apikey.Kind, apikey.Name, err.Error()))
-		}
-
+	if apikey.DeletionTimestamp.IsZero() {
+		// --- Not being deleted: ensure finalizer, then reconcile normally
 		if !controllerutil.ContainsFinalizer(&apikey, finalizer) {
+			// Use Patch to avoid update conflicts
+			patch := client.MergeFrom(apikey.DeepCopy())
 			controllerutil.AddFinalizer(&apikey, finalizer)
-			if err := r.Update(ctx, &apikey); err != nil {
-				return ctrl.Result{}, err
+			if err := r.Patch(ctx, &apikey, patch); err != nil {
+				return ctrl.Result{
+					RequeueAfter: 30 * time.Second,
+				}, err
 			}
-		}
-		return res, err
-	} else {
-		// The object is being deleted
-		if controllerutil.ContainsFinalizer(&apikey, finalizer) {
-			logger.Info("Deleting object", "apikey", apikey.Name)
-			if _, err := esutils.DeleteApikey(r.Client, ctx, esClient, apikey, req); err != nil {
-				return ctrl.Result{}, err
-			}
+			// Requeue so we don't continue in the same cycle with a mutated object
+			return ctrl.Result{Requeue: true}, nil
 
-			controllerutil.RemoveFinalizer(&apikey, finalizer)
-			if err := r.Update(ctx, &apikey); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
+		} else {
 
-		return ctrl.Result{}, nil
+			// Normal reconcile path
+			logger.Info("Creating/Updating API key", "name", req.NamespacedName)
+			res, err := esutils.CreateApikey(r.Client, ctx, esClient, apikey, req)
+
+			if err != nil {
+				r.Recorder.Event(&apikey, "Warning", "ReconcileError",
+					fmt.Sprintf("Failed to create/update %s/%s %q: %v", apikey.APIVersion, apikey.Kind, apikey.Name, err))
+				return res, err
+			}
+			r.Recorder.Event(&apikey, "Normal", "Reconciled",
+				fmt.Sprintf("Created/Updated %s/%s %q", apikey.APIVersion, apikey.Kind, apikey.Name))
+			return res, nil
+		}
 	}
+
+	// --- Being deleted: handle finalizer cleanup
+	if controllerutil.ContainsFinalizer(&apikey, finalizer) {
+		logger.Info("Deleting external API key", "name", req.NamespacedName)
+
+		if _, err := esutils.DeleteApikey(r.Client, ctx, esClient, apikey, req); err != nil {
+			// Surface the error so we retry and don't remove the finalizer prematurely
+			r.Recorder.Event(&apikey, "Warning", "DeleteError",
+				fmt.Sprintf("Failed external delete for %s/%s %q: %v", apikey.APIVersion, apikey.Kind, apikey.Name, err))
+			return ctrl.Result{}, err
+		}
+
+		patch := client.MergeFrom(apikey.DeepCopy())
+		controllerutil.RemoveFinalizer(&apikey, finalizer)
+		if err := r.Patch(ctx, &apikey, patch); err != nil {
+			return ctrl.Result{}, err
+		}
+		r.Recorder.Event(&apikey, "Normal", "Deleted",
+			fmt.Sprintf("External resource deleted for %s/%s %q; finalizer removed", apikey.APIVersion, apikey.Kind, apikey.Name))
+	}
+
+	return ctrl.Result{}, nil
 }
 
 func (r *ElasticsearchApikeyReconciler) getTargetInstance(object runtime.Object, TargetConfig eseckv1alpha1.CommonElasticsearchConfig, ctx context.Context, namespace string) (*configv2.ElasticsearchSpec, error) {
-	targetInstance := r.ProjectConfig.Spec.Elasticsearch
+	targetInstance := r.ProjectConfig.Elasticsearch
 	if TargetConfig.ElasticsearchInstance != "" {
 		var resourceInstance eseckv1alpha1.ElasticsearchInstance
 		if err := esutils.GetTargetElasticsearchInstance(r.Client, ctx, namespace, TargetConfig.ElasticsearchInstance, &resourceInstance); err != nil {

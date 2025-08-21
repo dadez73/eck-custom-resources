@@ -38,7 +38,7 @@ import (
 type IndexReconciler struct {
 	client.Client
 	Scheme        *runtime.Scheme
-	ProjectConfig configv2.ProjectConfig
+	ProjectConfig configv2.ProjectConfigSpec
 	Recorder      record.EventRecorder
 }
 
@@ -159,7 +159,7 @@ func (r *IndexReconciler) addFinalizer(o client.Object, finalizer string, ctx co
 }
 
 func (r *IndexReconciler) getTargetInstance(object runtime.Object, TargetConfig eseckv1alpha1.CommonElasticsearchConfig, ctx context.Context, namespace string) (*configv2.ElasticsearchSpec, error) {
-	targetInstance := r.ProjectConfig.Spec.Elasticsearch
+	targetInstance := r.ProjectConfig.Elasticsearch
 	if TargetConfig.ElasticsearchInstance != "" {
 		var resourceInstance eseckv1alpha1.ElasticsearchInstance
 		if err := esutils.GetTargetElasticsearchInstance(r.Client, ctx, namespace, TargetConfig.ElasticsearchInstance, &resourceInstance); err != nil {
