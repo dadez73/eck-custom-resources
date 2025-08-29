@@ -1,0 +1,17 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "eck-custom-resources-operator.fullname" . }}
+  labels:
+    {{- include "eck-custom-resources-operator.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.metrics.service.type }}
+  ports:
+    - port: {{ .Values.metrics.service.port }}
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "eck-custom-resources-operator.selectorLabels" . | nindent 4 }}
+{{- end }}

@@ -26,7 +26,8 @@ import (
 	esutils "eck-custom-resources/utils/elasticsearch"
 
 	eseckv1alpha1 "eck-custom-resources/api/es.eck/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/meta"
+
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -88,86 +89,233 @@ func (r *ElasticsearchApikeyReconciler) Reconcile(ctx context.Context, req ctrl.
 			controllerutil.AddFinalizer(&apikey, finalizer)
 			if err := r.Patch(ctx, &apikey, patch); err != nil {
 				return ctrl.Result{
-					RequeueAfter: 30 * time.Second,
+					RequeueAfter: 3 * time.Second,
 				}, err
 			}
 			// Requeue so we don't continue in the same cycle with a mutated object
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+		}
 
-		} else {
-			if apikey.Status.ObservedGeneration < desiredGen {
-				// Normal reconcile path
-				logger.Info("Creating/Updating API key", "name", req.NamespacedName)
-				_, err := esutils.CreateApikey(r.Client, ctx, esClient, apikey, req)
+		if condition := apimeta.FindStatusCondition(apikey.Status.Conditions, "Ready"); condition != nil {
+			if condition.Status == metav1.ConditionTrue {
+
+				if apikey.Status.ObservedGeneration < desiredGen {
+
+					if _, err := esutils.UpdateApikey(r.Client, ctx, esClient, apikey, req); err != nil {
+						r.Recorder.Event(&apikey, "Warning", "ReconcileError",
+							fmt.Sprintf("Failed to update %s/%s %q: %v", apikey.APIVersion, apikey.Kind, apikey.Name, err))
+
+						// We *saw* the new generation, but failed to make it ready.
+						apikeySetCondition(&apikey, metav1.Condition{
+							Type:               "Error",
+							Status:             metav1.ConditionFalse,
+							Reason:             "ReconcileError",
+							Message:            err.Error(),
+							ObservedGeneration: desiredGen,
+							LastTransitionTime: metav1.Now(),
+						})
+						// Do NOT bump .status.observedGeneration yet.
+						// Patch only status with the new condition.
+						if perr := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); perr != nil {
+							r.Recorder.Event(&apikey, "Warning", "patching",
+								fmt.Sprintf("patching status after error %v", perr))
+						}
+						return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("error creating API key Secret - Retrying: %v", &err)
+					}
+					apikey.Status.ObservedGeneration = desiredGen
+
+					if err := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); err != nil {
+						r.Recorder.Event(&apikey, "Warning", "patching",
+							fmt.Sprintf("patching status after error %v", err))
+						return ctrl.Result{}, err
+					}
+					return ctrl.Result{}, err
+				}
+				if apikey.Status.ObservedGeneration == desiredGen {
+					var needReconcile = false
+					var msg string
+					if _, err := esutils.GetAPIKeySecret(r.Client, ctx, req.Namespace, req.Name); err != nil {
+						msg = fmt.Sprintf("Secret %s not found", req.Name)
+						needReconcile = true
+					}
+					if !esutils.ApiKeyIDExist(r.Client, ctx, esClient, req, apikey) || needReconcile {
+
+						if esutils.ApiKeyNameExist(r.Client, ctx, esClient, req.Name) {
+							for _, apikey := range esutils.GetApiKeyWithName(r.Client, ctx, esClient, req.Name) {
+								esutils.UpdateExpirationApikey(r.Client, ctx, esClient, apikey, "1d")
+							}
+							msg = fmt.Sprintf("ApiKey with ID: %s not found. Expiring all keys with name: %s ", apikey.Status.APIKeyID, req.Name)
+							needReconcile = true
+						}
+					}
+
+					if needReconcile {
+						apikeySetCondition(&apikey, metav1.Condition{
+							Type:               "Ready",
+							Status:             metav1.ConditionFalse,
+							Reason:             "ReconcileNeeded",
+							Message:            msg,
+							ObservedGeneration: desiredGen,
+							LastTransitionTime: metav1.Now(),
+						})
+						if perr := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); perr != nil {
+							r.Recorder.Event(&apikey, "Warning", "patching",
+								fmt.Sprintf("patching status after error %v", perr))
+						}
+						return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+					}
+					return ctrl.Result{}, err
+				}
+				return ctrl.Result{}, err
+			} else {
+				logger.Info("Recreating API key", "name", req.NamespacedName)
+
+				res, errs := esutils.CreateApikey(r.Client, ctx, esClient, &apikey, req)
+				if errs != nil {
+					logger.Info("Recreating error")
+				}
 
 				if err != nil {
 					r.Recorder.Event(&apikey, "Warning", "ReconcileError",
 						fmt.Sprintf("Failed to create/update %s/%s %q: %v", apikey.APIVersion, apikey.Kind, apikey.Name, err))
 
 					// We *saw* the new generation, but failed to make it ready.
-					setCondition(&apikey, metav1.Condition{
-						Type:               "Ready",
+					apikeySetCondition(&apikey, metav1.Condition{
+						Type:               "Error",
 						Status:             metav1.ConditionFalse,
 						Reason:             "ReconcileError",
 						Message:            err.Error(),
 						ObservedGeneration: desiredGen,
 						LastTransitionTime: metav1.Now(),
 					})
+					if perr := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); perr != nil {
+						r.Recorder.Event(&apikey, "Warning", "patching",
+							fmt.Sprintf("patching status after error %v", perr))
+						return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("Recreating API key and Secret - Retrying: %v", &err)
+					}
+				}
+				apikeySetCondition(&apikey, metav1.Condition{
+					Type:               "Ready",
+					Status:             metav1.ConditionTrue,
+					Reason:             "Reconciled",
+					Message:            "Reconciled",
+					ObservedGeneration: desiredGen,
+					LastTransitionTime: metav1.Now(),
+				})
+				// Do NOT bump .status.observedGeneration yet.
+				// Patch only status with the new condition.
+				if perr := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); perr != nil {
+					r.Recorder.Event(&apikey, "Warning", "patching",
+						fmt.Sprintf("patching status after error %v", perr))
+				}
+				return res, err
+
+			}
+		}
+
+		if condition := apimeta.FindStatusCondition(apikey.Status.Conditions, "Initialized"); condition != nil {
+
+			if apikey.Status.ObservedGeneration < desiredGen {
+				// Normal reconcile path
+				logger.Info("Creating API key", "name", req.NamespacedName)
+
+				res, errs := esutils.CreateApikey(r.Client, ctx, esClient, &apikey, req)
+				if errs != nil {
+					logger.Info("CreateApikey error")
+				}
+
+				if err != nil {
+					r.Recorder.Event(&apikey, "Warning", "ReconcileError",
+						fmt.Sprintf("Failed to create/update %s/%s %q: %v", apikey.APIVersion, apikey.Kind, apikey.Name, err))
+
+					// We *saw* the new generation, but failed to make it ready.
+					apikeySetCondition(&apikey, metav1.Condition{
+						Type:               "Error",
+						Status:             metav1.ConditionFalse,
+						Reason:             "ReconcileError",
+						Message:            err.Error(),
+						ObservedGeneration: desiredGen,
+						LastTransitionTime: metav1.Now(),
+					})
+
 					// Do NOT bump .status.observedGeneration yet.
 					// Patch only status with the new condition.
 					if perr := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); perr != nil {
 						r.Recorder.Event(&apikey, "Warning", "patching",
 							fmt.Sprintf("patching status after error %v", perr))
 					}
-					return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+					return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("error creating API key Secret - Retrying: %v", &err)
 
 				}
+				logger.Info("Successfully created API key", "name", req.NamespacedName)
+
+				apikeySetCondition(&apikey, metav1.Condition{
+					Type:               "Ready",
+					Status:             metav1.ConditionTrue,
+					Reason:             "Reconciled",
+					Message:            "Resources are in desired state",
+					ObservedGeneration: desiredGen,
+					LastTransitionTime: metav1.Now(),
+				})
+
+				// Now it's safe to bump observedGeneration
+				apikey.Status.ObservedGeneration = desiredGen
+
+				if err := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); err != nil {
+					r.Recorder.Event(&apikey, "Warning", "patching",
+						fmt.Sprintf("patching status after error %v", err))
+					return ctrl.Result{}, err
+				}
+
+				r.Recorder.Event(&apikey, "Normal", "Reconciled",
+					fmt.Sprintf("Created/Updated %s/%s %q", apikey.APIVersion, apikey.Kind, apikey.Name))
+
+				return res, nil
 			}
 
-			setCondition(&apikey, metav1.Condition{
-				Type:               "Ready",
-				Status:             metav1.ConditionTrue,
-				Reason:             "Reconciled",
-				Message:            "Resources are in desired state",
-				ObservedGeneration: desiredGen,
-				LastTransitionTime: metav1.Now(),
-			})
+			return ctrl.Result{}, err
+			//maybe wrong condition
+		}
+		apikeySetCondition(&apikey, metav1.Condition{
+			Type:               "Initialized",
+			Status:             metav1.ConditionTrue,
+			Reason:             "FirstReconcile",
+			Message:            "Resource initialized",
+			ObservedGeneration: apikey.GetGeneration(),
+			LastTransitionTime: metav1.Now(),
+		})
 
-			// Now it's safe to bump observedGeneration
-			apikey.Status.ObservedGeneration = desiredGen
+		if err := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); err != nil {
+			r.Recorder.Event(&apikey, "Warning", "StatusPatchFailed",
+				fmt.Sprintf("failed to patch status: %v", err))
+		}
+		// Requeue so we don't continue in the same cycle with a mutated object
+		return ctrl.Result{RequeueAfter: 3 * time.Second}, nil
 
-			if err := r.Status().Patch(ctx, &apikey, client.MergeFrom(&eseckv1alpha1.ElasticsearchApikey{Status: *oldStatus})); err != nil {
+	} else {
+
+		// --- Being deleted: handle finalizer cleanup
+		if controllerutil.ContainsFinalizer(&apikey, finalizer) {
+			logger.Info("Deleting external API key", "name", req.NamespacedName)
+
+			if _, err := esutils.DeleteApikey(r.Client, ctx, esClient, apikey, req); err != nil {
+				// Surface the error so we retry and don't remove the finalizer prematurely
+				r.Recorder.Event(&apikey, "Warning", "DeleteError",
+					fmt.Sprintf("Failed external delete for %s/%s %q: %v", apikey.APIVersion, apikey.Kind, apikey.Name, err))
 				return ctrl.Result{}, err
 			}
 
-			r.Recorder.Event(&apikey, "Normal", "Reconciled",
-				fmt.Sprintf("Created/Updated %s/%s %q", apikey.APIVersion, apikey.Kind, apikey.Name))
+			controllerutil.RemoveFinalizer(&apikey, finalizer)
+			if err := r.Update(ctx, &apikey); err != nil {
+				return ctrl.Result{}, err
+			}
 
-			return ctrl.Result{}, nil
+			r.Recorder.Event(&apikey, "Normal", "Deleted",
+				fmt.Sprintf("External resource deleted for %s/%s %q; finalizer removed", apikey.APIVersion, apikey.Kind, apikey.Name))
 		}
+
+		return ctrl.Result{}, nil
 	}
-
-	// --- Being deleted: handle finalizer cleanup
-	if controllerutil.ContainsFinalizer(&apikey, finalizer) {
-		logger.Info("Deleting external API key", "name", req.NamespacedName)
-
-		if _, err := esutils.DeleteApikey(r.Client, ctx, esClient, apikey, req); err != nil {
-			// Surface the error so we retry and don't remove the finalizer prematurely
-			r.Recorder.Event(&apikey, "Warning", "DeleteError",
-				fmt.Sprintf("Failed external delete for %s/%s %q: %v", apikey.APIVersion, apikey.Kind, apikey.Name, err))
-			return ctrl.Result{}, err
-		}
-
-		patch := client.MergeFrom(apikey.DeepCopy())
-		controllerutil.RemoveFinalizer(&apikey, finalizer)
-		if err := r.Patch(ctx, &apikey, patch); err != nil {
-			return ctrl.Result{}, err
-		}
-		r.Recorder.Event(&apikey, "Normal", "Deleted",
-			fmt.Sprintf("External resource deleted for %s/%s %q; finalizer removed", apikey.APIVersion, apikey.Kind, apikey.Name))
-	}
-
-	return ctrl.Result{}, nil
 }
 
 func (r *ElasticsearchApikeyReconciler) getTargetInstance(object runtime.Object, TargetConfig eseckv1alpha1.CommonElasticsearchConfig, ctx context.Context, namespace string) (*configv2.ElasticsearchSpec, error) {
@@ -184,10 +332,10 @@ func (r *ElasticsearchApikeyReconciler) getTargetInstance(object runtime.Object,
 	return &targetInstance, nil
 }
 
-func setCondition(obj *eseckv1alpha1.ElasticsearchApikey, c metav1.Condition) {
+func apikeySetCondition(obj *eseckv1alpha1.ElasticsearchApikey, c metav1.Condition) {
 	// Update or add by Type
 	conds := obj.Status.Conditions
-	meta.SetStatusCondition(&conds, c)
+	apimeta.SetStatusCondition(&conds, c)
 	obj.Status.Conditions = conds
 }
 

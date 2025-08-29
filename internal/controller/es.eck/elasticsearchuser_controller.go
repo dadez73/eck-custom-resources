@@ -19,6 +19,7 @@ package eseck
 import (
 	"context"
 	"fmt"
+	"time"
 
 	configv2 "eck-custom-resources/api/config/v2"
 	"eck-custom-resources/utils"
@@ -26,13 +27,16 @@ import (
 
 	"k8s.io/client-go/tools/record"
 
+	eseckv1alpha1 "eck-custom-resources/api/es.eck/v1alpha1"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	eseckv1alpha1 "eck-custom-resources/api/es.eck/v1alpha1"
 )
 
 // ElasticsearchUserReconciler reconciles a ElasticsearchUser object
@@ -56,6 +60,11 @@ func (r *ElasticsearchUserReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	if err := r.Get(ctx, req.NamespacedName, &user); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+	// Keep an old copy of status for MergeFrom patches
+	oldStatus := user.Status.DeepCopy()
+
+	// Convenience locals
+	desiredGen := user.GetGeneration()
 
 	targetInstance, err := r.getTargetInstance(&user, user.Spec.TargetConfig, ctx, req.Namespace)
 	if err != nil {
@@ -74,21 +83,76 @@ func (r *ElasticsearchUserReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	if user.ObjectMeta.DeletionTimestamp.IsZero() {
+		if condition := apimeta.FindStatusCondition(user.Status.Conditions, "Ready"); condition != nil {
+			if condition.Status == metav1.ConditionTrue {
+				var msg string
+				_, err := esutils.GetUser(esClient, user.Name)
+				if err != nil {
+					if !apierrors.IsNotFound(err) {
+						return ctrl.Result{RequeueAfter: 30 * time.Second}, err
+					}
+					msg = fmt.Sprintf("User %s not found", user.Name)
+				}
+				if user.Status.ObservedGeneration < desiredGen {
+					msg = fmt.Sprintf("User %s changed", user.Name)
+				}
+				if len(msg) > 0 {
+
+					userSetCondition(&user, metav1.Condition{
+						Type:               "Ready",
+						Status:             metav1.ConditionFalse,
+						Reason:             "ReconcileNeeded",
+						Message:            msg,
+						ObservedGeneration: desiredGen,
+						LastTransitionTime: metav1.Now(),
+					})
+					if perr := r.Status().Patch(ctx, &user, client.MergeFrom(&eseckv1alpha1.ElasticsearchUser{Status: *oldStatus})); perr != nil {
+						r.Recorder.Event(&user, "Warning", "patching",
+							fmt.Sprintf("patching status after error %v", perr))
+					}
+					return ctrl.Result{RequeueAfter: 10 * time.Second}, err
+				}
+
+			}
+		}
 		logger.Info("Creating/Updating User", "user", req.Name)
 		res, err := esutils.UpsertUser(esClient, r.Client, ctx, user)
 
-		if err == nil {
-			r.Recorder.Event(&user, "Normal", "Created",
-				fmt.Sprintf("Created/Updated %s/%s %s", user.APIVersion, user.Kind, user.Name))
-		} else {
+		if err != nil {
 			r.Recorder.Event(&user, "Warning", "Failed to create/update",
 				fmt.Sprintf("Failed to create/update %s/%s %s: %s", user.APIVersion, user.Kind, user.Name, err.Error()))
+
+			userSetCondition(&user, metav1.Condition{
+				Type:               "Error",
+				Status:             metav1.ConditionFalse,
+				Reason:             "ReconcileError",
+				Message:            err.Error(),
+				ObservedGeneration: desiredGen,
+				LastTransitionTime: metav1.Now(),
+			})
+			if perr := r.Status().Patch(ctx, &user, client.MergeFrom(&eseckv1alpha1.ElasticsearchUser{Status: *oldStatus})); perr != nil {
+				r.Recorder.Event(&user, "Warning", "patching",
+					fmt.Sprintf("patching status after error %v", perr))
+			}
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, fmt.Errorf("error creating API key Secret - Retrying: %v", &err)
 		}
 
-		if err := r.addFinalizer(&user, finalizer, ctx); err != nil {
-			return ctrl.Result{}, err
+		r.Recorder.Event(&user, "Normal", "Created",
+			fmt.Sprintf("Created/Updated %s/%s %s", user.APIVersion, user.Kind, user.Name))
+		userSetCondition(&user, metav1.Condition{
+			Type:               "Ready",
+			Status:             metav1.ConditionTrue,
+			Reason:             "Reconcile",
+			Message:            "Reconciled",
+			ObservedGeneration: desiredGen,
+			LastTransitionTime: metav1.Now(),
+		})
+		if perr := r.Status().Patch(ctx, &user, client.MergeFrom(&eseckv1alpha1.ElasticsearchUser{Status: *oldStatus})); perr != nil {
+			r.Recorder.Event(&user, "Warning", "patching",
+				fmt.Sprintf("patching status after error %v", perr))
 		}
 		return res, err
+
 	} else {
 		// The object is being deleted
 		if controllerutil.ContainsFinalizer(&user, finalizer) {
@@ -105,6 +169,14 @@ func (r *ElasticsearchUserReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 		return ctrl.Result{}, nil
 	}
+	return ctrl.Result{}, nil
+}
+
+func userSetCondition(obj *eseckv1alpha1.ElasticsearchUser, c metav1.Condition) {
+	// Update or add by Type
+	conds := obj.Status.Conditions
+	apimeta.SetStatusCondition(&conds, c)
+	obj.Status.Conditions = conds
 }
 
 // SetupWithManager sets up the controller with the Manager.

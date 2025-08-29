@@ -1,0 +1,17 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "eck-custom-resources-operator.fullname" . }}-test-connection"
+  labels:
+    {{- include "eck-custom-resources-operator.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "eck-custom-resources-operator.fullname" . }}:{{ .Values.metrics.service.port }}/metrics']
+  restartPolicy: Never
+{{- end }}

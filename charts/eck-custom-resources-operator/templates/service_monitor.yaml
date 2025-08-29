@@ -1,0 +1,22 @@
+{{- if .Values.metrics.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ .Release.Name }}-service-monitor
+  namespace: {{ default .Release.Namespace .Values.metrics.serviceMonitor.namespace | quote }}
+  {{- if .Values.metrics.serviceMonitor.labels }}
+  labels:
+    {{- toYaml .Values.metrics.serviceMonitor.labels | nindent 4 }}
+  {{- end }}
+spec:
+  endpoints:
+    - path: /metrics
+      port: metrics
+      scheme: http
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      {{- include "eck-custom-resources-operator.labels" . | nindent 6 }}
+{{- end }}
